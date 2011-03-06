@@ -1,69 +1,59 @@
+require 'behaving_rodent/matchers/be_on_the'
+require 'behaving_rodent/matchers/stay_on_the_same'
+require 'behaving_rodent/matchers/see'
+require 'behaving_rodent/matchers/see_image'
+
 module BehavingRodent
   module Matchers
-    def included?(klass)
+    def included(klass)
       # Make we.should matchers possible
       klass.send(:alias_method, :we, :page)
 
-      RSpec::Matchers.define :be_on_the do |path|
-        match do |page|
-          page.current_path == path
-        end
-        
-        failure_message_for_should do |page|
-          "expected to be on #{path}, but was on #{page.current_path}"
-        end
-        
-        failure_message_for_should_not do |page|
-          "expected not to be on #{path}"
-        end
+      # Test the current URL
+      #
+      #     we.should be_on_the home_page
+      #
+      def be_on_the(page_url)
+        BeOnThe.neW(page)
       end
 
-      Rspec::Matchers.define :see do |*args|
-        text = args[0]
-        options = args[1].is_a?(Hash) ? args[1] : {}
-        match do |page|
-          page.visit(options[:on]) unless options[:on].nil?
-
-          if options[:in].nil?
-            page.has_content?(text)
-          else
-            page.has_css?(options[:in], :text => text)
-          end
-        end
-
-        failure_message_for_should do |page|
-          "expected to see \"#{text}\" on the page #{page.current_path}"
-        end
-        
-        failure_message_for_should_not do |page|
-          "expected not to see \"#{text}\" on the page #{page.current_path}"
-        end
+      # Test that block does not change or reload the page
+      #
+      #     expect {
+      #       click_link 'AJAX action'
+      #     }.to stay_on_the_same page
+      #
+      def stay_on_the_same(page)
+        StayOnTheSame.new(page)
+      end
+      
+      # Test for content
+      #
+      #     # plain
+      #     we.should see 'some text'
+      #
+      #     # with a container
+      #     we.should see 'title', :in => 'h1'
+      #
+      #     # with a page url
+      #     we.should see 'my site', :on => home_page
+      #
+      def see(text, options={})
+        See.new(text, options)
       end
 
-      Rspec::Matchers.define :see_image do |*args|
-        url = args[0]
-        if url[0,1]!='/'
-          # Rails magic
-          selector = "img[src^=\"/images/#{url}?\"]"
-        else
-          selector = "img[src^=\"#{url}?\"]"
-        end
-        options = args[1].is_a?(Hash) ? args[1] : {}
-        match do |page|
-          if options[:in].nil?
-            page.has_css?(selector)
-          else
-            page.has_css?(selector)
-          end
-        end
-
-        failure_message_for_should do |page|
-          "expected to see image \"#{url}\" on the page #{page.current_path}"
-        end
-        
-        failure_message_for_should_not do |page|
-          "expected not to see image \"#{url}\" on the page #{page.current_path}"
-        end
+      # Test for an image present
+      #
+      # If the URL is relative, it's assumed relative to /images.
+      #
+      # See #see for a list of options
+      #
+      #     we.should see_image 'new.png'
+      #
+      #     we.should see_image @bob.avatar_url
+      #
+      def see_image(url, options={})
+        SeeImage.new(url, options)
       end
     end
   end
